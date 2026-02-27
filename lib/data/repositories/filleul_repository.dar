@@ -1,0 +1,10 @@
+import 'package:safeflow_parrain/models/filleul_model.dart';
+/// Contrat abstrait.
+/// Swap MockFilleulRepository <-> FirebaseFilleulRepository
+/// sans toucher au reste de l'app.
+abstract class FilleulRepository {
+ Future<List<Filleul>> fetchFilleuls();
+ Future<void> addFilleul(Filleul f);
+ Future<void> updateFilleul(Filleul f);
+ Future<void> deleteFilleul(String id);
+}
