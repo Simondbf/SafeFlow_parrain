@@ -1,7 +1,7 @@
 import 'package:safeflow_parrain/models/filleul_model.dart';
 
-/// Contrat (interface) du repository.
-/// Permet de swapper Mock <-> Firebase sans changer le reste de l'app.
+/// Contrat abstrait.
+/// Swap MockFilleulRepository <-> FirebaseFilleulRepository sans toucher au reste de l'app.
 abstract class FilleulRepository {
   Future<List<Filleul>> fetchFilleuls();
   Future<void> addFilleul(Filleul f);
