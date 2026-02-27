@@ -1,52 +1,110 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:safeflow_parrain/core/app_colors.dart';
 import 'package:safeflow_parrain/screens/dashboard/home_screen.dart';
 import 'package:safeflow_parrain/screens/dashboard/filleuls_screen.dart';
 import 'package:safeflow_parrain/screens/dashboard/parametres_screen.dart';
-import 'package:safeflow_parrain/core/app_colors.dart';
+// Au merge feat/auth, ajouter :
+// import 'package:safeflow_parrain/screens/auth/login_screen.dart';
+// import 'package:safeflow_parrain/providers/auth_provider.dart';
 
-/// Router principal avec ShellRoute pour conserver la BottomNavigationBar
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final appRouter = GoRouter(
+  navigatorKey:    _rootNavigatorKey,
   initialLocation: '/home',
+
+  // Auth guard — décommenter au merge feat/auth :
+  // redirect: (context, state) {
+  //   final user = ref.read(authProvider);
+  //   if (user == null && state.uri.toString() != '/login')
+  //     return '/login';
+  //   return null;
+  // },
+
   routes: [
-    ShellRoute(
-      builder: (context, state, child) => _ScaffoldWithNav(child: child),
-      routes: [
-        GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-        GoRoute(path: '/filleuls', builder: (_, __) => const FilleulsScreen()),
-        GoRoute(path: '/parametres', builder: (_, __) => const ParametresScreen()),
+    // StatefulShellRoute — garde le scroll et l'état de chaque onglet.
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, shell) =>
+          ScaffoldWithAdaptiveNav(navigationShell: shell),
+      branches: [
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/home',
+            builder: (_, __) => const HomeScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/filleuls',
+            builder: (_, __) => const FilleulsScreen()),
+        ]),
+        StatefulShellBranch(routes: [
+          GoRoute(path: '/parametres',
+            builder: (_, __) => const ParametresScreen()),
+        ]),
       ],
     ),
+    // Route login — décommenter au merge feat/auth :
+    // GoRoute(path: '/login',
+    //   builder: (_, __) => const LoginScreen()),
   ],
 );
 
-class _ScaffoldWithNav extends StatelessWidget {
-  final Widget child;
-  const _ScaffoldWithNav({required this.child});
+class ScaffoldWithAdaptiveNav extends StatelessWidget {
+  final StatefulNavigationShell navigationShell;
+  const ScaffoldWithAdaptiveNav({super.key, required this.navigationShell});
 
-  static const _tabs = ['/home', '/filleuls', '/parametres'];
-
-  /// Détermine l'index actif à partir de la location courante.
-  int _currentIndex(BuildContext context) {
-    final loc = GoRouter.of(context).location;
-    final i = _tabs.indexWhere((t) => loc.startsWith(t));
-    return i < 0 ? 0 : i;
-  }
+  static const _destinations = [
+    (icon: Icons.home_outlined,     active: Icons.home,     label: 'Accueil'),
+    (icon: Icons.people_outlined,   active: Icons.people,   label: 'Filleuls'),
+    (icon: Icons.settings_outlined, active: Icons.settings, label: 'Paramètres'),
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
-      body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex(context),
-        selectedItemColor: AppColors.primary,
-        onTap: (i) => context.go(_tabs[i]),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Accueil'),
-          BottomNavigationBarItem(icon: Icon(Icons.people_outlined), activeIcon: Icon(Icons.people), label: 'Filleuls'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), activeIcon: Icon(Icons.settings), label: 'Paramètres'),
+      body: Row(
+        children: [
+          if (isTablet) ...[
+            NavigationRail(
+              selectedIndex:         navigationShell.currentIndex,
+              onDestinationSelected: navigationShell.goBranch,
+              labelType:             NavigationRailLabelType.all,
+              backgroundColor:       AppColors.surface,
+              selectedIconTheme:
+                const IconThemeData(color: AppColors.primary),
+              destinations: [
+                for (final d in _destinations)
+                  NavigationRailDestination(
+                    icon:         Icon(d.icon),
+                    selectedIcon: Icon(d.active),
+                    label:        Text(d.label),
+                  ),
+              ],
+            ),
+            const VerticalDivider(
+              thickness: 1, width: 1, color: AppColors.divider),
+          ],
+          Expanded(child: navigationShell),
         ],
       ),
+      bottomNavigationBar: isTablet
+          ? null
+          : NavigationBar(
+              selectedIndex:         navigationShell.currentIndex,
+              onDestinationSelected: navigationShell.goBranch,
+              backgroundColor:       AppColors.surface,
+              indicatorColor:
+                AppColors.primary.withOpacity(0.12),
+              destinations: [
+                for (final d in _destinations)
+                  NavigationDestination(
+                    icon:         Icon(d.icon),
+                    selectedIcon: Icon(d.active),
+                    label:        d.label,
+                  ),
+              ],
+            ),
     );
   }
 }
